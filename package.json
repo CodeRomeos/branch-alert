@@ -1,0 +1,23 @@
+{
+  "name": "branch-alert",
+  "displayName": "Branch Alert",
+  "description": "Shows a warning modal with the current Git branch when you open a project",
+  "version": "0.0.3",
+  "icon": "images/preview.png",
+  "publisher": "coderomeos",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Productivity"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/coderomeos/branch-alert.git"
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "*"
+  ],
+  "contributes": {}
+}
