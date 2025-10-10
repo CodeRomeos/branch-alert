@@ -1,6 +1,6 @@
 <p align="center">
   <br />
-  <a title="Learn more about Branch Alert" href="http://github.com/coderomeos/branch-alert"><img src="https://github.com/CodeRomeos/branch-alert/images/detail-screenshot.png" alt="image preview" width="50%" /></a>
+  <a title="Learn more about Branch Alert" href="http://github.com/coderomeos/branch-alert"><img src="https://github.com/CodeRomeos/branch-alert/blob/main/images/detail-screenshot.png" alt="image preview" width="50%" /></a>
 </p>
 
 # Branch Alert
