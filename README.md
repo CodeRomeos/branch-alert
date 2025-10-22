@@ -18,6 +18,6 @@ A VS Code extension that shows a **native modal popup** with your **current Git 
 1. Run `vsce package` in this folder to create `.vsix`.
 2. Install it globally:
     ```bash
-    code --install-extension branch-alert-0.0.3.vsix
+    code --install-extension branch-alert-0.0.x.vsix
     ```
 3. Open any Git project → modal appears with branch name.

@@ -1,15 +1,20 @@
 const vscode = require("vscode");
 const { execSync } = require("child_process");
 
+// Track if the modal has already been shown in this session
 let modalShown = false;
 
 function activate(context) {
-	if (!modalShown) {
-		showBranchModal(context);
-	}
+	showBranchModal(); // show once on startup
+
+	// Optional: if you want to re-show when workspace changes, uncomment below
+	vscode.workspace.onDidChangeWorkspaceFolders(() => {
+		if (!modalShown) showBranchModal();
+	});
 }
 
-function showBranchModal(context) {
+async function showBranchModal() {
+	// Prevent multiple triggers
 	if (modalShown) return;
 	modalShown = true;
 
@@ -22,155 +27,48 @@ function showBranchModal(context) {
 			.toString()
 			.trim();
 
-		const panel = vscode.window.createWebviewPanel(
-			"branchAlert",
-			`Branch: ${branch}`,
-			vscode.ViewColumn.Active,
-			{
-				enableScripts: true,
-				retainContextWhenHidden: false,
-			}
+		const selection = await vscode.window.showInformationMessage(
+			`🚨 You are on branch: ${branch.toUpperCase()}`,
+			{ modal: true },
+			"Switch Branch",
+			"Git Fetch --all"
 		);
 
-		const style = `
-			<style>
-				body {
-					background: rgba(20, 20, 20, 0.95);
-					color: white;
-					font-family: 'Segoe UI', sans-serif;
-					display: flex;
-					flex-direction: column;
-					align-items: center;
-					justify-content: center;
-					height: 100vh;
-					margin: 0;
-				}
-				.container {
-					background: #1e1e1e;
-					border-radius: 12px;
-					padding: 40px;
-					text-align: center;
-					box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-					max-width: 400px;
-				}
-				img {
-					width: 64px;
-					height: 64px;
-					margin-bottom: 20px;
-				}
-				h1 {
-					font-size: 22px;
-					margin-bottom: 10px;
-				}
-				.branch {
-					color: #4ade80;
-					font-weight: bold;
-					font-size: 24px;
-					margin-bottom: 20px;
-				}
-				button {
-					background: #007acc;
-					border: none;
-					color: white;
-					padding: 10px 20px;
-					margin: 8px;
-					border-radius: 6px;
-					font-size: 15px;
-					cursor: pointer;
-				}
-				button:hover {
-					background: #1a85ff;
-				}
-				button.secondary {
-					background: #444;
-				}
-				button.danger {
-					background: #c53030;
-				}
-			</style>
-		`;
+		if (!selection || selection === "Close") {
+			return; // just close
+		}
 
-		const script = `
-			<script>
-				const vscode = acquireVsCodeApi();
+		if (selection === "Switch Branch") {
+			let branches = execSync("git branch --all --color=never", { cwd })
+				.toString()
+				.split("\n")
+				.map((b) => b.replace("*", "").trim())
+				.filter((b) => b);
 
-				document.getElementById('switch').onclick = () => vscode.postMessage({ cmd: 'switch' });
-				document.getElementById('fetch').onclick = () => vscode.postMessage({ cmd: 'fetch' });
-				document.getElementById('close').onclick = () => vscode.postMessage({ cmd: 'close' });
-			</script>
-		`;
+			const picked = await vscode.window.showQuickPick(branches, {
+				placeHolder: "Select a branch to switch to",
+			});
 
-		const iconPath = vscode.Uri.joinPath(context.extensionUri, "icon.png");
-
-		panel.webview.html = `
-			<!DOCTYPE html>
-			<html lang="en">
-			<head><meta charset="UTF-8">${style}</head>
-			<body>
-				<div class="container">
-					<img src="${panel.webview.asWebviewUri(iconPath)}" alt="Logo" />
-					<h1>🚨 You are on branch:</h1>
-					<div class="branch">${branch.toUpperCase()}</div>
-					<button id="switch">🔁 Switch Branch</button>
-					<button id="fetch" class="secondary">⬇️ Git Fetch --all</button>
-					<button id="close" class="danger">✖ Close</button>
-				</div>
-				${script}
-			</body>
-			</html>
-		`;
-
-		panel.webview.onDidReceiveMessage(async (message) => {
-			if (message.cmd === "close") {
-				panel.dispose();
-				return;
-			}
-
-			if (message.cmd === "fetch") {
+			if (picked) {
 				try {
-					execSync("git fetch --all", { cwd });
+					execSync(`git checkout ${picked}`, { cwd });
 					vscode.window.showInformationMessage(
-						"✅ Git fetch completed!"
+						`✅ Switched to branch ${picked}`
 					);
-				} catch (err) {
-					vscode.window.showErrorMessage("❌ Git fetch failed");
-				}
-			}
-
-			if (message.cmd === "switch") {
-				try {
-					let branches = execSync("git branch --all --color=never", {
-						cwd,
-					})
-						.toString()
-						.split("\n")
-						.map((b) => b.replace("*", "").trim())
-						.filter((b) => b);
-
-					const picked = await vscode.window.showQuickPick(branches, {
-						placeHolder: "Select a branch to switch to",
-					});
-
-					if (picked) {
-						try {
-							execSync(`git checkout ${picked}`, { cwd });
-							vscode.window.showInformationMessage(
-								`✅ Switched to branch ${picked}`
-							);
-							panel.dispose();
-						} catch (err) {
-							vscode.window.showErrorMessage(
-								`❌ Failed to switch to branch ${picked}`
-							);
-						}
-					}
 				} catch (err) {
 					vscode.window.showErrorMessage(
-						"❌ Could not list branches"
+						`❌ Failed to switch to branch ${picked}`
 					);
 				}
 			}
-		});
+		} else if (selection === "Git Fetch --all") {
+			try {
+				execSync("git fetch --all", { cwd });
+				vscode.window.showInformationMessage("✅ Git fetch completed!");
+			} catch (err) {
+				vscode.window.showErrorMessage("❌ Git fetch failed");
+			}
+		}
 	} catch (err) {
 		console.log("Not a git repo");
 	}
